@@ -1,34 +1,39 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Button } from './components/ui/button'
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="max-w-md mx-auto text-center space-y-6 p-6">
+        <h1 className="text-4xl font-bold text-foreground">
+          Vite + React + Tailwind
+        </h1>
+        <div className="space-y-4">
+          <Button 
+            onClick={() => setCount((count) => count + 1)}
+            className="w-full"
+          >
+            count is {count}
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              Outline
+            </Button>
+            <Button variant="secondary" size="sm">
+              Secondary
+            </Button>
+            <Button variant="destructive" size="sm">
+              Destructive
+            </Button>
+          </div>
+        </div>
+        <p className="text-muted-foreground">
+          Shadcn UI와 Tailwind CSS가 성공적으로 설정되었습니다!
         </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
