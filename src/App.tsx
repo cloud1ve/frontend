@@ -5,9 +5,9 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
       <div className="max-w-md mx-auto text-center space-y-6 p-6">
-        <h1 className="text-4xl font-bold text-foreground">
+        <h1 className="text-4xl font-bold text-[var(--color-foreground)]">
           Vite + React + Tailwind
         </h1>
         <div className="space-y-4">
@@ -29,7 +29,7 @@ function App() {
             </Button>
           </div>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-[var(--color-muted-foreground)]">
           Shadcn UI와 Tailwind CSS가 성공적으로 설정되었습니다!
         </p>
       </div>
