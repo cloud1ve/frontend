@@ -5,12 +5,11 @@ import {
   Activity,
   Globe2,
   Calendar,
-  Sparkles,
   Award,
 } from 'lucide-react';
 import { StatCard } from '../components/common/stat-card';
 import { formatCompactNumber, formatCurrency } from '../utils/format';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 
 // TODO: 실제 차트 라이브러리 통합 (Recharts)

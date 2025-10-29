@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, X, Plus, ArrowRight, Sparkles, GitCompare } from 'lucide-react';
+import { Search, X, Plus, ArrowRight, GitCompare } from 'lucide-react';
 import {
   formatCurrency,
   formatCompactNumber,

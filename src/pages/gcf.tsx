@@ -12,7 +12,6 @@ import { StatCard } from '../components/common/stat-card';
 import {
   formatCurrency,
   formatDate,
-  getThemeBadgeClass,
   formatTheme,
 } from '../utils/format';
 import { Card } from '../components/ui/card';

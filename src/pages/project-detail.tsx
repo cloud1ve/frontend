@@ -18,7 +18,7 @@ import {
   formatTheme,
 } from '../utils/format';
 import type { Project } from '../types/project';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 
