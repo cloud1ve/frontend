@@ -6,13 +6,10 @@ import {
   Building2,
   Users,
   Search,
-  Filter,
-  Download,
 } from 'lucide-react';
 import { StatCard } from '../components/common/stat-card';
 import {
   formatCurrency,
-  formatCompactNumber,
   formatDate,
   getThemeBadgeClass,
   formatTheme,

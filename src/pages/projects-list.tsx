@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, SlidersHorizontal, Download, Eye } from 'lucide-react';
+import { Search, SlidersHorizontal, Download, Eye } from 'lucide-react';
 import { formatCurrency, formatCompactNumber, formatDate, getSourceBadgeClass, getThemeBadgeClass, formatTheme } from '../utils/format';
 import type { Project } from '../types/project';
 

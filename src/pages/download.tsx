@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, FileText, Database, Filter, CheckCircle } from 'lucide-react';
+import { Download, FileText, Database, CheckCircle } from 'lucide-react';
 
 const formatOptions = [
   { id: 'csv', name: 'CSV', description: 'Comma-separated values, Excel 호환' },

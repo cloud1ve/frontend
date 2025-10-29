@@ -1,4 +1,4 @@
-import type { Project, FilterState, Statistics } from './project';
+import type { Project, FilterState } from './project';
 
 // API 요청 타입
 export interface GetProjectsParams {

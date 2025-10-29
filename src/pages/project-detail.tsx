@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Calendar,
   DollarSign,
-  Users,
   Leaf,
   MapPin,
   ExternalLink,
