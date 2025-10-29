@@ -1,4 +1,6 @@
-import { BookOpen, Database, RefreshCw, Shield, FileCheck, GitBranch } from 'lucide-react';
+import { BookOpen, Database, RefreshCw, Shield, FileCheck, GitBranch, Sparkles, AlertTriangle } from 'lucide-react';
+import { Card } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 
 const steps = [
   {
@@ -50,57 +52,69 @@ const dataSources = [
 
 export function MethodologyPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-        <div className="container-custom py-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-6">
-              <BookOpen className="w-10 h-10" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 text-white">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+        <div className="container-custom relative z-10 py-16 sm:py-24">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
+              <BookOpen className="w-4 h-4" />
+              <span className="text-sm font-medium">Methodology</span>
             </div>
-            <h1 className="heading-1 mb-6">방법론</h1>
-            <p className="text-xl text-white/90">
+            
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
+              방법론
+            </h1>
+            <p className="text-xl sm:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
               데이터 수집, 처리, 검증 프로세스를 투명하게 공개합니다
             </p>
           </div>
         </div>
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
       </div>
 
       {/* Overview Section */}
-      <section className="section bg-white">
+      <section className="section -mt-16">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto">
-            <h2 className="heading-2 text-center mb-8">데이터 파이프라인</h2>
-            <p className="text-lg text-gray-600 text-center mb-12">
-              신뢰할 수 있는 기후 데이터를 제공하기 위한 5단계 프로세스
-            </p>
+            <div className="text-center mb-12">
+              <Badge variant="primary" className="mb-4">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Data Pipeline
+              </Badge>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">데이터 파이프라인</h2>
+              <p className="text-lg text-gray-600">
+                신뢰할 수 있는 기후 데이터를 제공하기 위한 5단계 프로세스
+              </p>
+            </div>
 
-            <div className="space-y-8">
+            <div className="space-y-6">
               {steps.map((step, index) => (
                 <div key={step.number} className="relative">
                   {index < steps.length - 1 && (
-                    <div className="absolute left-8 top-20 w-0.5 h-16 bg-gradient-to-b from-primary-500 to-primary-300"></div>
+                    <div className="absolute left-8 top-24 w-0.5 h-12 bg-gradient-to-b from-indigo-400 to-indigo-200"></div>
                   )}
-                  <div className="card p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start gap-4">
+                  <Card className="p-8 hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-start gap-6">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">
                           {step.number}
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <step.icon className="w-6 h-6 text-primary-600" />
-                          <h3 className="text-xl font-semibold text-gray-900">
+                        <div className="flex items-center gap-3 mb-3">
+                          <step.icon className="w-7 h-7 text-indigo-600" strokeWidth={2} />
+                          <h3 className="text-2xl font-bold text-gray-900">
                             {step.title}
                           </h3>
                         </div>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 text-lg leading-relaxed">
                           {step.description}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 </div>
               ))}
             </div>
@@ -282,36 +296,51 @@ export function MethodologyPage() {
       <section className="section bg-white">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto">
-            <h2 className="heading-2 text-center mb-8">한계점 및 주의사항</h2>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">한계점 및 주의사항</h2>
+              <p className="text-lg text-gray-600">
+                데이터 사용 시 고려해야 할 사항들입니다
+              </p>
+            </div>
             
-            <div className="card p-6 border-l-4 border-amber-500">
-              <ul className="space-y-3 text-gray-700">
-                <li className="flex items-start gap-3">
-                  <span className="text-amber-500 font-bold mt-1">•</span>
-                  <span>
+            <Card className="p-8 border-l-4 border-amber-500 bg-gradient-to-br from-amber-50 to-white">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-white" strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">주의사항</h3>
+                  <p className="text-gray-600">다음 사항들을 유의하여 데이터를 활용해 주세요</p>
+                </div>
+              </div>
+              
+              <ul className="space-y-4 text-gray-700">
+                <li className="flex items-start gap-3 p-4 rounded-lg bg-white border border-amber-200">
+                  <span className="text-amber-500 font-bold text-xl mt-0.5">•</span>
+                  <span className="text-base leading-relaxed">
                     데이터는 원본 소스의 업데이트 주기에 따라 지연될 수 있습니다.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-amber-500 font-bold mt-1">•</span>
-                  <span>
+                <li className="flex items-start gap-3 p-4 rounded-lg bg-white border border-amber-200">
+                  <span className="text-amber-500 font-bold text-xl mt-0.5">•</span>
+                  <span className="text-base leading-relaxed">
                     일부 프로젝트는 정보가 불완전하거나 누락될 수 있습니다.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-amber-500 font-bold mt-1">•</span>
-                  <span>
+                <li className="flex items-start gap-3 p-4 rounded-lg bg-white border border-amber-200">
+                  <span className="text-amber-500 font-bold text-xl mt-0.5">•</span>
+                  <span className="text-base leading-relaxed">
                     데이터 표준화 과정에서 일부 세부 정보가 손실될 수 있습니다.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-amber-500 font-bold mt-1">•</span>
-                  <span>
+                <li className="flex items-start gap-3 p-4 rounded-lg bg-white border border-amber-200">
+                  <span className="text-amber-500 font-bold text-xl mt-0.5">•</span>
+                  <span className="text-base leading-relaxed">
                     정확한 정보는 반드시 원본 소스를 확인해 주세요.
                   </span>
                 </li>
               </ul>
-            </div>
+            </Card>
           </div>
         </div>
       </section>
