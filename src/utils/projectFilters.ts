@@ -50,14 +50,20 @@ export function createProjectFilter(filterOptions: ProjectFilterOptions) {
     }
 
     // 프로젝트 규모 필터링
-    if (selectedProjectSize !== 'all' && project.project_size !== selectedProjectSize) {
-      return false;
+    if (selectedProjectSize && selectedProjectSize !== 'all') {
+      // project_size 또는 projectsize 필드 확인 (백엔드에서 둘 다 올 수 있음)
+      const projectSize = project.project_size || (project as Project & { projectsize?: string | null }).projectsize;
+      if (!projectSize || projectSize !== selectedProjectSize) {
+        return false;
+      }
     }
 
     // ESS 카테고리 필터링
-    if (selectedEssCategory !== 'all') {
-      const projectEssCategory = (project as Project & { ess_category?: string | null }).ess_category;
-      if (projectEssCategory !== selectedEssCategory) {
+    if (selectedEssCategory && selectedEssCategory !== 'all') {
+      // ess_category 또는 esscategory 필드 확인 (백엔드에서 둘 다 올 수 있음)
+      const projectEssCategory = (project as Project & { ess_category?: string | null }).ess_category ||
+                                  (project as Project & { esscategory?: string | null }).esscategory;
+      if (!projectEssCategory || projectEssCategory !== selectedEssCategory) {
         return false;
       }
     }

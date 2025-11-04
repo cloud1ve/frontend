@@ -28,7 +28,6 @@ export function GCFPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedTheme, setSelectedTheme] = useState<string>('all');
   const [selectedSize, setSelectedSize] = useState<string>('all');
-  const [selectedModality, setSelectedModality] = useState<string>('all');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
   const [selectedEssCategory, setSelectedEssCategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,9 +46,9 @@ export function GCFPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // GCF 프로젝트만 필터링 (전체 프로젝트에서) - PAP와 SAP 모두 포함
+  // GCF 프로젝트만 필터링 (전체 프로젝트에서) - PAP만
   const gcfProjects = useMemo(() => {
-    return allProjects.filter(p => p.modality === 'PAP' || p.modality === 'SAP');
+    return allProjects.filter(p => p.modality === 'PAP');
   }, [allProjects]);
 
   // 통계 계산
@@ -68,12 +67,12 @@ export function GCFPage() {
       searchQuery: debouncedSearchQuery,
       selectedTheme,
       selectedProjectSize: selectedSize,
-      selectedModality,
+      selectedModality: 'all', // PAP로 이미 필터링되어 있으므로 all
       selectedCountry,
       selectedEssCategory,
     });
     return gcfProjects.filter(filterFn);
-  }, [gcfProjects, debouncedSearchQuery, selectedTheme, selectedSize, selectedModality, selectedCountry, selectedEssCategory]);
+  }, [gcfProjects, debouncedSearchQuery, selectedTheme, selectedSize, selectedCountry, selectedEssCategory]);
 
   // 페이지네이션 계산
   const pagination = useMemo(() => {
@@ -169,7 +168,6 @@ export function GCFPage() {
                     onClick={() => {
                       setSelectedTheme('all');
                       setSelectedSize('all');
-                      setSelectedModality('all');
                       setSelectedCountry('all');
                       setSelectedEssCategory('all');
                       setSearchQuery('');
@@ -182,27 +180,6 @@ export function GCFPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      모달리티
-                    </label>
-                    <select
-                      value={selectedModality}
-                      onChange={(e) => {
-                        setSelectedModality(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="input py-2.5"
-                    >
-                      <option value="all">전체</option>
-                      {filters?.modalities.map((modality) => (
-                        <option key={modality} value={modality}>
-                          {modality}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
                       테마

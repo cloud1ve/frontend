@@ -99,9 +99,13 @@ export function CarbonOffsetsPage() {
     
     // 프로젝트 규모 필터링
     if (selectedSize !== 'all') {
-      filtered = filtered.filter(p => p.project_size === selectedSize);
+      filtered = filtered.filter(p => {
+        const extendedProject = p as typeof p & { projectsize?: string | null };
+        const projectSize = p.project_size || extendedProject.projectsize;
+        return projectSize === selectedSize;
+      });
     }
-    
+
     // 국가 필터링
     if (selectedCountry !== 'all') {
       filtered = filtered.filter(p => {
@@ -109,11 +113,12 @@ export function CarbonOffsetsPage() {
         return projectCountries.includes(selectedCountry);
       });
     }
-    
+
     // ESS 카테고리 필터링
     if (selectedEssCategory !== 'all') {
       filtered = filtered.filter(p => {
-        const essCategory = (p as any).ess_category;
+        const extendedProject = p as typeof p & { ess_category?: string | null; esscategory?: string | null };
+        const essCategory = extendedProject.ess_category || extendedProject.esscategory;
         return essCategory === selectedEssCategory;
       });
     }

@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, SlidersHorizontal, Download, Eye, Filter } from 'lucide-react';
 import { formatCurrency, formatCompactNumber, formatDate } from '../utils/format';
-import type { Project } from '../types/project';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { projectsApi } from '../services/api';
-import type { FiltersData } from '../types/api';
 import { Loading } from '../components/common/loading';
+import { useProjects } from '../hooks/useProjects';
+import { createProjectFilter, paginate } from '../utils/projectFilters';
 
 export function ProjectsListPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,104 +19,39 @@ export function ProjectsListPage() {
   const [selectedProjectSize, setSelectedProjectSize] = useState<string>('all');
   const [selectedEssCategory, setSelectedEssCategory] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-  
-  // 데이터 상태
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filters, setFilters] = useState<FiltersData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalProjects, setTotalProjects] = useState(0);
-  const limit = 10;
+  const limit = 20;
+
+  // 전체 프로젝트 로드
+  const { allProjects, filters, loading, error } = useProjects();
 
   // 검색어 디바운싱
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setCurrentPage(1); // 검색어 변경 시 첫 페이지로 리셋
+      setCurrentPage(1);
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // 필터 옵션 로드
-  useEffect(() => {
-    async function loadFilters() {
-      try {
-        const response = await projectsApi.getFilters();
-        setFilters(response.data);
-      } catch (err) {
-        console.error('Failed to load filters:', err);
-      }
-    }
-    loadFilters();
-  }, []);
+  // 필터링된 프로젝트
+  const filteredProjects = useMemo(() => {
+    const filterFn = createProjectFilter({
+      searchQuery: debouncedSearchQuery,
+      selectedTheme,
+      selectedProjectSize,
+      selectedModality,
+      selectedCountry,
+      selectedEssCategory,
+    });
+    return allProjects.filter(filterFn);
+  }, [allProjects, debouncedSearchQuery, selectedTheme, selectedProjectSize, selectedModality, selectedCountry, selectedEssCategory]);
 
-  // 프로젝트 목록 로드
-  useEffect(() => {
-    async function loadProjects() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const params: {
-          page: number;
-          limit: number;
-          search?: string;
-        } = {
-          page: currentPage,
-          limit,
-        };
-        
-        // 현재 API는 search 파라미터만 지원
-        if (debouncedSearchQuery.trim()) params.search = debouncedSearchQuery.trim();
-        
-        // TODO: 백엔드에서 필터 파라미터 지원 시 활성화
-        // if (selectedModality !== 'all') params.modality = selectedModality;
-        // if (selectedTheme !== 'all') params.theme = selectedTheme;
-        // if (selectedCountry !== 'all') params.countries = selectedCountry;
-        // if (selectedProjectSize !== 'all') params.projectSize = selectedProjectSize;
-        
-        const response = await projectsApi.getProjects(params);
-        
-        // 클라이언트 측 필터링 적용
-        let filteredItems = response.data.items;
-        
-        if (selectedModality !== 'all') {
-          filteredItems = filteredItems.filter(p => p.modality === selectedModality);
-        }
-        if (selectedTheme !== 'all') {
-          filteredItems = filteredItems.filter(p => p.theme === selectedTheme);
-        }
-        if (selectedCountry !== 'all') {
-          filteredItems = filteredItems.filter(p => {
-            const projectCountries = p.countries ? p.countries.split(',').map(c => c.trim()) : [];
-            return projectCountries.includes(selectedCountry);
-          });
-        }
-        if (selectedProjectSize !== 'all') {
-          filteredItems = filteredItems.filter(p => p.project_size === selectedProjectSize);
-        }
-        if (selectedEssCategory !== 'all') {
-          filteredItems = filteredItems.filter(p => {
-            const projectEssCategory = (p as Project & { ess_category?: string | null }).ess_category;
-            return projectEssCategory === selectedEssCategory;
-          });
-        }
-        
-        setProjects(filteredItems);
-        setTotalPages(response.data.pagination.total_pages);
-        setTotalProjects(response.data.pagination.total_items);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '프로젝트를 불러오는데 실패했습니다');
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    loadProjects();
-  }, [currentPage, debouncedSearchQuery, selectedModality, selectedTheme, selectedCountry, selectedProjectSize, selectedEssCategory]); // 디바운싱된 검색어 사용
+  // 페이지네이션 계산
+  const pagination = useMemo(() => {
+    return paginate(filteredProjects, currentPage, limit);
+  }, [filteredProjects, currentPage, limit]);
 
   function handleResetFilters() {
     setSelectedModality('all');
@@ -141,7 +75,7 @@ export function ProjectsListPage() {
             </Badge>
             <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-gray-900 tracking-tight">프로젝트 탐색</h1>
             <p className="text-lg sm:text-xl text-gray-600">
-              {formatCompactNumber(totalProjects)}개의 기후 프로젝트를 검색하고 분석하세요
+              {loading ? '...' : formatCompactNumber(allProjects.length)}개의 기후 프로젝트를 검색하고 분석하세요
             </p>
           </div>
         </div>
@@ -162,14 +96,6 @@ export function ProjectsListPage() {
                 >
                   초기화
                 </Button>
-              </div>
-
-              {/* Note: 필터 기능은 현재 백엔드에서 지원하지 않음 */}
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>알림:</strong> 필터는 클라이언트 측에서 적용됩니다. 
-                  검색과 함께 사용할 수 있습니다.
-                </p>
               </div>
 
               {/* Modality Filter */}
@@ -285,18 +211,13 @@ export function ProjectsListPage() {
               {/* Quick Stats */}
               <div className="pt-6 border-t border-gray-200">
                 <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">
-                  {debouncedSearchQuery.trim() ? '필터링된 결과' : '전체 결과'}
+                  필터링된 결과
                 </p>
                 <p className="text-3xl font-bold text-gray-900 mb-1">
-                  {formatCompactNumber(totalProjects)}
+                  {loading ? '...' : pagination.totalItems}
                 </p>
                 <p className="text-sm text-gray-600">
                   프로젝트
-                  {debouncedSearchQuery.trim() && (
-                    <span className="block mt-1 text-xs text-emerald-600 font-medium">
-                      검색어: "{debouncedSearchQuery}"
-                    </span>
-                  )}
                 </p>
               </div>
             </Card>
@@ -346,7 +267,7 @@ export function ProjectsListPage() {
                   <p className="text-gray-500">{error}</p>
                 </div>
               </Card>
-            ) : projects.length === 0 ? (
+            ) : pagination.totalItems === 0 ? (
               <Card className="p-16 text-center">
                 <div className="max-w-sm mx-auto">
                   <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -358,7 +279,7 @@ export function ProjectsListPage() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {projects.map((project) => (
+                {pagination.items.map((project) => (
                   <Link
                     key={project.ref}
                     to={`/projects/${project.ref}`}
@@ -442,35 +363,35 @@ export function ProjectsListPage() {
             )}
 
             {/* Pagination */}
-            {!loading && projects.length > 0 && (
+            {!loading && pagination.totalItems > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between mt-8 gap-4">
                 <p className="text-sm font-medium text-gray-600">
-                  페이지 {currentPage} / {totalPages} (총 {formatCompactNumber(totalProjects)}개)
+                  페이지 {pagination.currentPage} / {pagination.totalPages} (총 {formatCompactNumber(pagination.totalItems)}개)
                 </p>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    disabled={currentPage === 1}
+                  <Button
+                    variant="outline"
+                    disabled={!pagination.hasPrev}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   >
                     이전
                   </Button>
                   <div className="flex items-center gap-2">
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
                       let pageNum: number;
-                      if (totalPages <= 5) {
+                      if (pagination.totalPages <= 5) {
                         pageNum = i + 1;
-                      } else if (currentPage <= 3) {
+                      } else if (pagination.currentPage <= 3) {
                         pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
+                      } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
                       } else {
-                        pageNum = currentPage - 2 + i;
+                        pageNum = pagination.currentPage - 2 + i;
                       }
                       return (
                         <Button
                           key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
+                          variant={pagination.currentPage === pageNum ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(pageNum)}
                           className="min-w-[40px]"
@@ -481,8 +402,8 @@ export function ProjectsListPage() {
                     })}
                   </div>
                   <Button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={!pagination.hasNext}
+                    onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
                   >
                     다음
                   </Button>
@@ -495,4 +416,3 @@ export function ProjectsListPage() {
     </div>
   );
 }
-

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(curl -s \"$VITE_API_BASE_URL:-http://localhost:3000/api/projects?page=1&limit=1\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
