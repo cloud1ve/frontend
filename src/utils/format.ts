@@ -20,17 +20,24 @@ export function formatCurrency(amount: number | null | undefined): string {
 // 큰 숫자 축약 (1,000,000 → 1M)
 export function formatCompactNumber(num: number | null | undefined): string {
   if (num === null || num === undefined) return '-';
-  
+
+  const formatWithUnit = (value: number, divisor: number, unit: string): string => {
+    const result = value / divisor;
+    // 소수점이 0이면 생략, 아니면 1자리까지 표시
+    return result % 1 === 0 ? `${result.toFixed(0)}${unit}` : `${result.toFixed(1)}${unit}`;
+  };
+
   if (num >= 1_000_000_000) {
-    return `${(num / 1_000_000_000).toFixed(1)}B`;
+    return formatWithUnit(num, 1_000_000_000, 'B');
   }
   if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`;
+    return formatWithUnit(num, 1_000_000, 'M');
   }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(1)}K`;
+  if (num >= 10_000) {
+    return formatWithUnit(num, 1_000, 'K');
   }
-  return num.toString();
+  // 10,000 미만은 천 단위 콤마 표시
+  return new Intl.NumberFormat('ko-KR').format(num);
 }
 
 // 날짜 포맷팅

@@ -60,9 +60,11 @@ export function HomePage() {
       <section className="gradient-hero text-white relative overflow-hidden min-h-[600px] flex items-center">
         <div className="container-custom relative z-10 py-16 sm:py-24">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6 animate-fade-in">
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">전 세계 48만+ 기후 프로젝트 데이터</span>
+              <span className="text-sm font-medium">
+                {loading ? '데이터 로딩 중...' : `전 세계 ${stats.totalProjects.toLocaleString('ko-KR')}개 기후 프로젝트 데이터`}
+              </span>
             </div>
             
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 animate-fade-in tracking-tight">
@@ -93,7 +95,7 @@ export function HomePage() {
               </div>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
               <Link
                 to="/projects"
                 className="btn-primary inline-flex items-center gap-2 shadow-xl hover:shadow-2xl"
@@ -109,6 +111,28 @@ export function HomePage() {
                 통계 분석
               </Link>
             </div>
+
+            {/* Quick Stats */}
+            {!loading && !error && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto animate-slide-up">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <p className="text-white/70 text-xs uppercase tracking-wide mb-1">GCF</p>
+                  <p className="text-2xl font-bold">{stats.gcfProjects.toLocaleString('ko-KR')}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <p className="text-white/70 text-xs uppercase tracking-wide mb-1">탄소상쇄</p>
+                  <p className="text-2xl font-bold">{stats.carbonProjects.toLocaleString('ko-KR')}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <p className="text-white/70 text-xs uppercase tracking-wide mb-1">크레딧</p>
+                  <p className="text-2xl font-bold">{(stats.totalCredits / 1_000_000).toFixed(1)}M</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <p className="text-white/70 text-xs uppercase tracking-wide mb-1">금융</p>
+                  <p className="text-2xl font-bold">${(stats.totalFinancing / 1_000_000_000).toFixed(1)}B</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -119,7 +143,7 @@ export function HomePage() {
       {/* Stats Section */}
       <section className="section bg-gradient-to-b from-white via-gray-50 to-white -mt-16">
         <div className="container-custom">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 animate-fade-in">
             <Badge variant="primary" className="mb-4">
               <TrendingUp className="w-3 h-3 mr-1" />
               실시간 데이터 현황
@@ -132,13 +156,38 @@ export function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {loading ? (
-              <div className="col-span-full">
-                <Loading />
-              </div>
+              <>
+                {[...Array(6)].map((_, i) => (
+                  <Card key={i} className="stat-card animate-pulse">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
+                        <div className="h-10 bg-gray-300 rounded w-32 mb-2"></div>
+                      </div>
+                      <div className="w-16 h-16 bg-gray-200 rounded-xl"></div>
+                    </div>
+                  </Card>
+                ))}
+              </>
             ) : error ? (
-              <div className="col-span-full text-center">
-                <p className="text-red-600 mb-2">에러 발생</p>
-                <p className="text-gray-500">{error}</p>
+              <div className="col-span-full">
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="pt-8 pb-8 text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">통계 데이터를 불러올 수 없습니다</h3>
+                    <p className="text-red-700 mb-4">{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                    >
+                      다시 시도
+                    </button>
+                  </CardContent>
+                </Card>
               </div>
             ) : (
               <>
@@ -146,7 +195,7 @@ export function HomePage() {
                   title="총 프로젝트"
                   value={stats.totalProjects}
                   icon={Database}
-                  colorClass="text-primary-500"
+                  colorClass="text-primary-600"
                 />
                 <StatCard
                   title="GCF 프로젝트"
@@ -158,13 +207,13 @@ export function HomePage() {
                   title="탄소 상쇄 프로젝트"
                   value={stats.carbonProjects}
                   icon={Leaf}
-                  colorClass="text-sky-500"
+                  colorClass="text-sky-600"
                 />
                 <StatCard
                   title="총 발급 크레딧"
                   value={stats.totalCredits}
                   icon={TrendingUp}
-                  suffix="tCO2e"
+                  suffix="tCO₂e"
                   colorClass="text-green-600"
                 />
                 <StatCard
@@ -174,20 +223,23 @@ export function HomePage() {
                   suffix="USD"
                   colorClass="text-blue-600"
                 />
-                <Card className="bg-gradient-to-br from-gradient-to-br from-emerald-50 via-sky-50 to-white border-emerald-200/50">
+                <Card className="bg-gradient-to-br from-emerald-50 via-sky-50 to-white border-emerald-200/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                   <CardContent className="pt-8 pb-6">
                     <div className="text-center">
                       <p className="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wide">
                         데이터 소스
                       </p>
-                      <div className="flex items-center justify-center gap-3">
-                        <Badge variant="primary" className="text-sm px-4 py-2">
+                      <div className="flex items-center justify-center gap-3 flex-wrap">
+                        <Badge variant="primary" className="text-sm px-4 py-2 hover:scale-105 transition-transform cursor-default">
                           GCF
                         </Badge>
-                        <Badge variant="secondary" className="text-sm px-4 py-2">
+                        <Badge variant="secondary" className="text-sm px-4 py-2 hover:scale-105 transition-transform cursor-default">
                           CarbonPlan
                         </Badge>
                       </div>
+                      <p className="text-xs text-gray-500 mt-4">
+                        최종 업데이트: {new Date().toLocaleDateString('ko-KR')}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

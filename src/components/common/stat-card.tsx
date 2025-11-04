@@ -26,16 +26,20 @@ export function StatCard({
     typeof value === 'number' ? formatCompactNumber(value) : value;
 
   return (
-    <Card className="stat-card group cursor-default">
+    <Card className="stat-card group cursor-default hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">{title}</p>
-          <div className="flex items-baseline gap-2.5">
-            <h3 className="text-4xl lg:text-5xl font-bold font-mono text-gray-900 tracking-tight">
+          <p className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
+            {title}
+          </p>
+          <div className="flex items-baseline gap-2.5 mb-2">
+            <h3 className="text-4xl lg:text-5xl font-bold font-mono text-gray-900 tracking-tight group-hover:scale-105 transition-transform duration-300 origin-left">
               {displayValue}
             </h3>
             {suffix && (
-              <span className="text-base font-semibold text-gray-500">{suffix}</span>
+              <span className="text-base font-semibold text-gray-500 group-hover:text-gray-700 transition-colors">
+                {suffix}
+              </span>
             )}
           </div>
           {trend && (
@@ -52,9 +56,9 @@ export function StatCard({
           )}
         </div>
         <div
-          className={`p-3.5 rounded-xl bg-gradient-to-br from-gray-50 to-white shadow-sm group-hover:shadow-md transition-all ${colorClass}`}
+          className={`p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white shadow-sm group-hover:shadow-lg transition-all duration-300 group-hover:scale-110 ${colorClass}`}
         >
-          <Icon className="w-8 h-8" strokeWidth={2} />
+          <Icon className="w-8 h-8" strokeWidth={2.5} />
         </div>
       </div>
     </Card>

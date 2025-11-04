@@ -94,20 +94,21 @@ export const statisticsApi = {
     });
 
     // GCF 프로젝트 필터링
-    const gcfProjects = allProjects.filter((p) => 
-      p.modality && (p.total_gcf_funding !== null || p.bm !== null || p.theme !== null)
-    );
+    // modality가 'PAP'이면 GCF 프로젝트
+    const gcfProjects = allProjects.filter((p) => {
+      if (p.source) {
+        return p.source === 'GCF';
+      }
+      return p.modality === 'PAP';
+    });
 
     // Carbon 프로젝트 필터링
+    // modality가 'SAP'이면 탄소 상쇄 프로젝트
     const carbonProjects = allProjects.filter((p) => {
-      const project = p as Project & {
-        carbon_registry?: string | null;
-        carbon_protocol?: string | null;
-        credit_quantity?: number | null;
-      };
-      return project.carbon_registry !== null ||
-        project.carbon_protocol !== null ||
-        project.credit_quantity !== null;
+      if (p.source) {
+        return p.source === 'CarbonPlan';
+      }
+      return p.modality === 'SAP';
     });
 
     // 통계 계산
