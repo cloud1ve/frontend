@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Globe2,
@@ -13,73 +13,72 @@ import {
   formatCurrency,
   formatDate,
   formatTheme,
+  formatCompactNumber,
 } from '../utils/format';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-
-// TODO: 실제 API 연동
-const mockGcfStats = {
-  totalProjects: 150,
-  totalFunding: 25000000000,
-  countries: 89,
-  beneficiaries: 500000000,
-};
-
-const mockGcfProjects = [
-  {
-    id: 'FP043',
-    name: 'The Saïss Water Conservation Project',
-    countries: ['Morocco'],
-    theme: 'Adaptation' as const,
-    projectSize: 'Medium' as const,
-    totalGcfFunding: 36959537.57,
-    totalProjectValue: 50000000,
-    approvalDate: new Date('2020-03-15'),
-    boardMeeting: 'B.16',
-  },
-  {
-    id: 'FP089',
-    name: 'Climate Resilient Water Management in Rural Areas',
-    countries: ['India'],
-    theme: 'Adaptation' as const,
-    projectSize: 'Large' as const,
-    totalGcfFunding: 45000000,
-    totalProjectValue: 120000000,
-    approvalDate: new Date('2021-06-20'),
-    boardMeeting: 'B.24',
-  },
-  {
-    id: 'FP125',
-    name: 'Renewable Energy Development Program',
-    countries: ['Bangladesh', 'Nepal'],
-    theme: 'Mitigation' as const,
-    projectSize: 'Large' as const,
-    totalGcfFunding: 98000000,
-    totalProjectValue: 250000000,
-    approvalDate: new Date('2022-11-10'),
-    boardMeeting: 'B.32',
-  },
-];
+import { useProjects } from '../hooks/useProjects';
+import { createProjectFilter, paginate } from '../utils/projectFilters';
+import { Loading } from '../components/common/loading';
 
 export function GCFPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedTheme, setSelectedTheme] = useState<string>('all');
   const [selectedSize, setSelectedSize] = useState<string>('all');
+  const [selectedModality, setSelectedModality] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedEssCategory, setSelectedEssCategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 20;
 
-  const filteredProjects = mockGcfProjects.filter((project) => {
-    if (searchQuery && !project.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (selectedTheme !== 'all' && project.theme !== selectedTheme) {
-      return false;
-    }
-    if (selectedSize !== 'all' && project.projectSize !== selectedSize) {
-      return false;
-    }
-    return true;
-  });
+  // 전체 프로젝트 로드
+  const { allProjects, filters, loading, error } = useProjects();
+
+  // 검색어 디바운싱
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // GCF 프로젝트만 필터링 (전체 프로젝트에서) - PAP와 SAP 모두 포함
+  const gcfProjects = useMemo(() => {
+    return allProjects.filter(p => p.modality === 'PAP' || p.modality === 'SAP');
+  }, [allProjects]);
+
+  // 통계 계산
+  const stats = useMemo(() => {
+    return {
+      totalProjects: gcfProjects.length,
+      totalFunding: gcfProjects.reduce((sum, p) => sum + (p.total_gcf_funding || 0), 0),
+      countries: new Set(gcfProjects.map(p => p.countries).filter(Boolean)).size,
+      beneficiaries: 0,
+    };
+  }, [gcfProjects]);
+
+  // 필터링된 프로젝트 (전체 GCF 프로젝트에서 필터링)
+  const filteredProjects = useMemo(() => {
+    const filterFn = createProjectFilter({
+      searchQuery: debouncedSearchQuery,
+      selectedTheme,
+      selectedProjectSize: selectedSize,
+      selectedModality,
+      selectedCountry,
+      selectedEssCategory,
+    });
+    return gcfProjects.filter(filterFn);
+  }, [gcfProjects, debouncedSearchQuery, selectedTheme, selectedSize, selectedModality, selectedCountry, selectedEssCategory]);
+
+  // 페이지네이션 계산
+  const pagination = useMemo(() => {
+    return paginate(filteredProjects, currentPage, limit);
+  }, [filteredProjects, currentPage, limit]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
@@ -121,33 +120,37 @@ export function GCFPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">GCF Impact Snapshot</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            <StatCard
-              title="총 프로젝트"
-              value={mockGcfStats.totalProjects}
-              icon={Building2}
-              colorClass="text-emerald-600"
-            />
-            <StatCard
-              title="총 GCF 금융"
-              value={mockGcfStats.totalFunding}
-              suffix="USD"
-              icon={TrendingUp}
-              colorClass="text-blue-600"
-            />
-            <StatCard
-              title="참여 국가"
-              value={mockGcfStats.countries}
-              icon={Globe2}
-              colorClass="text-violet-600"
-            />
-            <StatCard
-              title="총 수혜자"
-              value={mockGcfStats.beneficiaries}
-              icon={Users}
-              colorClass="text-amber-600"
-            />
-          </div>
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <StatCard
+                title="총 프로젝트"
+                value={stats.totalProjects}
+                icon={Building2}
+                colorClass="text-emerald-600"
+              />
+              <StatCard
+                title="총 GCF 금융"
+                value={stats.totalFunding}
+                suffix="USD"
+                icon={TrendingUp}
+                colorClass="text-blue-600"
+              />
+              <StatCard
+                title="참여 국가"
+                value={stats.countries}
+                icon={Globe2}
+                colorClass="text-violet-600"
+              />
+              <StatCard
+                title="전체 프로젝트"
+                value={formatCompactNumber(allProjects.length)}
+                icon={Users}
+                colorClass="text-amber-600"
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -166,7 +169,11 @@ export function GCFPage() {
                     onClick={() => {
                       setSelectedTheme('all');
                       setSelectedSize('all');
+                      setSelectedModality('all');
+                      setSelectedCountry('all');
+                      setSelectedEssCategory('all');
                       setSearchQuery('');
+                      setCurrentPage(1);
                     }}
                     className="text-sm text-emerald-600 hover:text-emerald-700 h-auto p-0"
                   >
@@ -177,17 +184,43 @@ export function GCFPage() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      모달리티
+                    </label>
+                    <select
+                      value={selectedModality}
+                      onChange={(e) => {
+                        setSelectedModality(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.modalities.map((modality) => (
+                        <option key={modality} value={modality}>
+                          {modality}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
                       테마
                     </label>
                     <select
                       value={selectedTheme}
-                      onChange={(e) => setSelectedTheme(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedTheme(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="input py-2.5"
                     >
                       <option value="all">전체</option>
-                      <option value="Adaptation">적응</option>
-                      <option value="Mitigation">완화</option>
-                      <option value="Cross-cutting">통합</option>
+                      {filters?.themes.map((theme) => (
+                        <option key={theme} value={theme}>
+                          {theme === 'Adaptation' ? '적응' : theme === 'Mitigation' ? '완화' : '통합'}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -197,13 +230,60 @@ export function GCFPage() {
                     </label>
                     <select
                       value={selectedSize}
-                      onChange={(e) => setSelectedSize(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedSize(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="input py-2.5"
                     >
                       <option value="all">전체</option>
-                      <option value="Small">Small</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Large">Large</option>
+                      {filters?.project_sizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      국가
+                    </label>
+                    <select
+                      value={selectedCountry}
+                      onChange={(e) => {
+                        setSelectedCountry(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.countries.slice(0, 50).map((country) => (
+                        <option key={country} value={country}>
+                          {country}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      ESS 카테고리
+                    </label>
+                    <select
+                      value={selectedEssCategory}
+                      onChange={(e) => {
+                        setSelectedEssCategory(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.ess_categories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -212,7 +292,7 @@ export function GCFPage() {
                       필터링된 결과
                     </p>
                     <p className="text-3xl font-bold text-gray-900 mb-1">
-                      {filteredProjects.length}
+                      {loading ? '...' : pagination.totalItems}
                     </p>
                     <p className="text-sm text-gray-600">
                       프로젝트
@@ -239,7 +319,18 @@ export function GCFPage() {
               </Card>
 
               {/* Results */}
-              {filteredProjects.length === 0 ? (
+              {loading ? (
+                <Card className="p-16">
+                  <Loading />
+                </Card>
+              ) : error ? (
+                <Card className="p-16 text-center">
+                  <div className="max-w-sm mx-auto">
+                    <p className="text-red-600 mb-2">에러 발생</p>
+                    <p className="text-gray-500">{error}</p>
+                  </div>
+                </Card>
+              ) : pagination.totalItems === 0 ? (
                 <Card className="p-16 text-center">
                   <div className="max-w-sm mx-auto">
                     <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -251,10 +342,10 @@ export function GCFPage() {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {filteredProjects.map((project) => (
+                  {pagination.items.map((project) => (
                     <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
+                      key={project.ref}
+                      to={`/projects/${project.ref}`}
                       className="group block"
                     >
                       <Card className="p-6 hover:shadow-xl hover:border-emerald-500 transition-all duration-300">
@@ -262,53 +353,113 @@ export function GCFPage() {
                           <Badge variant="primary" className="font-semibold">
                             GCF
                           </Badge>
-                          <Badge variant="outline" className="font-medium">
-                            {formatTheme(project.theme)}
-                          </Badge>
-                          <Badge variant="default">
-                            {project.projectSize}
-                          </Badge>
+                          {project.theme && (
+                            <Badge variant="outline" className="font-medium">
+                              {formatTheme(project.theme)}
+                            </Badge>
+                          )}
+                          {project.project_size && (
+                            <Badge variant="default">
+                              {project.project_size}
+                            </Badge>
+                          )}
                         </div>
 
                         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
-                          {project.name}
+                          {project.project_name}
                         </h3>
 
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-6">
-                          <span className="font-mono font-medium">ID: {project.id}</span>
-                          <span>• {project.countries.join(', ')}</span>
-                          <span>• {formatDate(project.approvalDate)}</span>
-                          <span>• Board: {project.boardMeeting}</span>
+                          <span className="font-mono font-medium">ID: {project.ref}</span>
+                          {project.countries && <span>• {project.countries}</span>}
+                          {project.approval_date && (
+                            <span>• {formatDate(new Date(project.approval_date))}</span>
+                          )}
+                          {project.bm && <span>• Board: {project.bm}</span>}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">GCF 금융</p>
-                            <p className="text-base font-bold text-gray-900">
-                              {formatCurrency(project.totalGcfFunding)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">총 프로젝트 가치</p>
-                            <p className="text-base font-bold text-gray-900">
-                              {formatCurrency(project.totalProjectValue)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">공공 비율</p>
-                            <p className="text-base font-bold text-emerald-600">
-                              {Math.round(
-                                (project.totalGcfFunding /
-                                  project.totalProjectValue) *
-                                  100
-                              )}
-                              %
-                            </p>
-                          </div>
+                          {project.total_gcf_funding && project.total_gcf_funding > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">GCF 금융</p>
+                              <p className="text-base font-bold text-gray-900">
+                                {formatCurrency(project.total_gcf_funding)}
+                              </p>
+                            </div>
+                          )}
+                          {project.total_project_value && project.total_project_value > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">총 프로젝트 가치</p>
+                              <p className="text-base font-bold text-gray-900">
+                                {formatCurrency(project.total_project_value)}
+                              </p>
+                            </div>
+                          )}
+                          {project.total_gcf_funding && project.total_project_value && 
+                           project.total_gcf_funding > 0 && project.total_project_value > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">공공 비율</p>
+                              <p className="text-base font-bold text-emerald-600">
+                                {Math.round(
+                                  (project.total_gcf_funding / project.total_project_value) * 100
+                                )}
+                                %
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </Card>
                     </Link>
                   ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {!loading && pagination.totalItems > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between mt-8 gap-4">
+                  <p className="text-sm font-medium text-gray-600">
+                    페이지 {pagination.currentPage} / {pagination.totalPages} (총 {formatCompactNumber(pagination.totalItems)}개)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      disabled={!pagination.hasPrev}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    >
+                      이전
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+                        let pageNum: number;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = pagination.currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="min-w-[40px]"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      disabled={!pagination.hasNext}
+                      onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                    >
+                      다음
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

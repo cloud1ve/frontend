@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Leaf,
@@ -17,72 +17,115 @@ import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-
-// TODO: 실제 API 연동
-const mockCarbonStats = {
-  totalProjects: 487934,
-  totalCredits: 1500000000,
-  registries: 5,
-  protocols: 45,
-};
-
-const mockCarbonProjects = [
-  {
-    id: 'VCS902',
-    name: 'KARIBA REDD+ PROJECT',
-    registry: 'verra',
-    protocol: ['vm0009'],
-    creditQuantity: 600000,
-    listingDate: new Date('2013-12-23'),
-    vintageRange: '2011-2019',
-    firstTransaction: new Date('2013-12-23'),
-    lastTransaction: new Date('2025-10-23'),
-  },
-  {
-    id: 'GLD2940',
-    name: 'Solar Power Plant Development',
-    registry: 'gold-standard',
-    protocol: ['gs001'],
-    creditQuantity: 450000,
-    listingDate: new Date('2015-05-10'),
-    vintageRange: '2014-2018',
-    firstTransaction: new Date('2015-05-10'),
-    lastTransaction: new Date('2025-09-15'),
-  },
-  {
-    id: 'VCS1234',
-    name: 'Forest Conservation Initiative',
-    registry: 'verra',
-    protocol: ['vm0015'],
-    creditQuantity: 1200000,
-    listingDate: new Date('2018-08-22'),
-    vintageRange: '2016-2020',
-    firstTransaction: new Date('2018-08-22'),
-    lastTransaction: new Date('2025-10-01'),
-  },
-];
-
-const registries = [
-  { id: 'verra', name: 'Verra (VCS)', count: 350000 },
-  { id: 'gold-standard', name: 'Gold Standard', count: 80000 },
-  { id: 'acr', name: 'American Carbon Registry', count: 30000 },
-  { id: 'car', name: 'Climate Action Reserve', count: 20000 },
-  { id: 'art', name: 'ART REDD+', count: 7934 },
-];
+import { useProjects } from '../hooks/useProjects';
+import { paginate } from '../utils/projectFilters';
+import { Loading } from '../components/common/loading';
 
 export function CarbonOffsetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedRegistry, setSelectedRegistry] = useState<string>('all');
+  const [selectedTheme, setSelectedTheme] = useState<string>('all');
+  const [selectedSize, setSelectedSize] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedEssCategory, setSelectedEssCategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 20;
 
-  const filteredProjects = mockCarbonProjects.filter((project) => {
-    if (searchQuery && !project.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
+  // 전체 프로젝트 로드
+  const { allProjects, filters, loading, error } = useProjects();
+
+  // 검색어 디바운싱
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // CarbonPlan 프로젝트만 필터링 (SAP만)
+  const carbonProjects = useMemo(() => {
+    return allProjects.filter(p => p.modality === 'SAP');
+  }, [allProjects]);
+
+  // 통계 계산
+  const stats = useMemo(() => {
+    return {
+      totalProjects: carbonProjects.length,
+      totalCredits: carbonProjects.reduce((sum, p) => sum + ((p as any).credit_quantity || 0), 0),
+      registries: new Set(carbonProjects.map(p => (p as any).carbon_registry).filter(Boolean)).size,
+      protocols: new Set(carbonProjects.map(p => (p as any).carbon_protocol).filter(Boolean)).size,
+    };
+  }, [carbonProjects]);
+
+  // 레지스트리별 통계
+  const registries = useMemo(() => {
+    return Array.from(
+      new Set(carbonProjects.map(p => (p as any).carbon_registry).filter(Boolean))
+    ).map(registry => ({
+      id: registry as string,
+      name: registry as string,
+      count: carbonProjects.filter(p => (p as any).carbon_registry === registry).length,
+    }));
+  }, [carbonProjects]);
+
+  // 필터링된 프로젝트 (전체 탄소 상쇄 프로젝트에서 필터링) - SAP만
+  const filteredProjects = useMemo(() => {
+    // 검색어만 필터링하고 나머지는 SAP 프로젝트는 모두 표시
+    let filtered = carbonProjects;
+    
+    // 검색어 필터링
+    if (debouncedSearchQuery) {
+      filtered = filtered.filter(p => 
+        p.project_name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        p.ref.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      );
     }
-    if (selectedRegistry !== 'all' && project.registry !== selectedRegistry) {
-      return false;
+    
+    // 레지스트리 필터링 (carbon_registry가 있는 경우만)
+    if (selectedRegistry !== 'all') {
+      filtered = filtered.filter(p => {
+        const registry = (p as any).carbon_registry;
+        return registry === selectedRegistry;
+      });
     }
-    return true;
-  });
+    
+    // 테마 필터링
+    if (selectedTheme !== 'all') {
+      filtered = filtered.filter(p => p.theme === selectedTheme);
+    }
+    
+    // 프로젝트 규모 필터링
+    if (selectedSize !== 'all') {
+      filtered = filtered.filter(p => p.project_size === selectedSize);
+    }
+    
+    // 국가 필터링
+    if (selectedCountry !== 'all') {
+      filtered = filtered.filter(p => {
+        const projectCountries = p.countries ? p.countries.split(',').map(c => c.trim()) : [];
+        return projectCountries.includes(selectedCountry);
+      });
+    }
+    
+    // ESS 카테고리 필터링
+    if (selectedEssCategory !== 'all') {
+      filtered = filtered.filter(p => {
+        const essCategory = (p as any).ess_category;
+        return essCategory === selectedEssCategory;
+      });
+    }
+    
+    console.log('filteredProjects:', filtered.length, filtered.slice(0, 5));
+    return filtered;
+  }, [carbonProjects, debouncedSearchQuery, selectedTheme, selectedSize, selectedCountry, selectedEssCategory, selectedRegistry]);
+
+  // 페이지네이션 계산
+  const pagination = useMemo(() => {
+    return paginate(filteredProjects, currentPage, limit);
+  }, [filteredProjects, currentPage, limit]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
@@ -128,33 +171,37 @@ export function CarbonOffsetsPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">실시간 탄소 크레딧 현황</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            <StatCard
-              title="총 프로젝트"
-              value={mockCarbonStats.totalProjects}
-              icon={Database}
-              colorClass="text-sky-600"
-            />
-            <StatCard
-              title="총 발급 크레딧"
-              value={mockCarbonStats.totalCredits}
-              suffix="tCO2e"
-              icon={TrendingUp}
-              colorClass="text-emerald-600"
-            />
-            <StatCard
-              title="레지스트리"
-              value={mockCarbonStats.registries}
-              icon={Activity}
-              colorClass="text-violet-600"
-            />
-            <StatCard
-              title="프로토콜"
-              value={mockCarbonStats.protocols}
-              icon={Leaf}
-              colorClass="text-cyan-600"
-            />
-          </div>
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <StatCard
+                title="총 프로젝트"
+                value={stats.totalProjects}
+                icon={Database}
+                colorClass="text-sky-600"
+              />
+              <StatCard
+                title="총 발급 크레딧"
+                value={stats.totalCredits}
+                suffix="tCO2e"
+                icon={TrendingUp}
+                colorClass="text-emerald-600"
+              />
+              <StatCard
+                title="레지스트리"
+                value={stats.registries}
+                icon={Activity}
+                colorClass="text-violet-600"
+              />
+              <StatCard
+                title="프로토콜"
+                value={stats.protocols}
+                icon={Leaf}
+                colorClass="text-cyan-600"
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -164,23 +211,31 @@ export function CarbonOffsetsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
             레지스트리별 분포
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
-            {registries.map((registry) => (
-              <Card
-                key={registry.id}
-                className="p-6 hover:shadow-xl hover:border-sky-500 transition-all duration-300 cursor-pointer"
-                onClick={() => setSelectedRegistry(registry.id)}
-              >
-                <h3 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">
-                  {registry.name}
-                </h3>
-                <p className="text-3xl font-bold text-sky-600 mb-2">
-                  {formatCompactNumber(registry.count)}
-                </p>
-                <p className="text-xs font-medium text-gray-500">프로젝트</p>
-              </Card>
-            ))}
-          </div>
+          {loading ? (
+            <Loading />
+          ) : registries.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+              {registries.map((registry) => (
+                <Card
+                  key={registry.id}
+                  className="p-6 hover:shadow-xl hover:border-sky-500 transition-all duration-300 cursor-pointer"
+                  onClick={() => setSelectedRegistry(registry.id)}
+                >
+                  <h3 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+                    {registry.name}
+                  </h3>
+                  <p className="text-3xl font-bold text-sky-600 mb-2">
+                    {formatCompactNumber(registry.count)}
+                  </p>
+                  <p className="text-xs font-medium text-gray-500">프로젝트</p>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <p className="text-gray-500">레지스트리 데이터가 없습니다</p>
+            </Card>
+          )}
         </div>
       </section>
 
@@ -198,7 +253,12 @@ export function CarbonOffsetsPage() {
                     size="sm"
                     onClick={() => {
                       setSelectedRegistry('all');
+                      setSelectedTheme('all');
+                      setSelectedSize('all');
+                      setSelectedCountry('all');
+                      setSelectedEssCategory('all');
                       setSearchQuery('');
+                      setCurrentPage(1);
                     }}
                     className="text-sm text-sky-600 hover:text-sky-700 h-auto p-0"
                   >
@@ -213,7 +273,10 @@ export function CarbonOffsetsPage() {
                     </label>
                     <select
                       value={selectedRegistry}
-                      onChange={(e) => setSelectedRegistry(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedRegistry(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="input py-2.5"
                     >
                       <option value="all">전체</option>
@@ -225,12 +288,96 @@ export function CarbonOffsetsPage() {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      테마
+                    </label>
+                    <select
+                      value={selectedTheme}
+                      onChange={(e) => {
+                        setSelectedTheme(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.themes.map((theme) => (
+                        <option key={theme} value={theme}>
+                          {theme === 'Adaptation' ? '적응' : theme === 'Mitigation' ? '완화' : '통합'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      프로젝트 규모
+                    </label>
+                    <select
+                      value={selectedSize}
+                      onChange={(e) => {
+                        setSelectedSize(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.project_sizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      국가
+                    </label>
+                    <select
+                      value={selectedCountry}
+                      onChange={(e) => {
+                        setSelectedCountry(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.countries.slice(0, 50).map((country) => (
+                        <option key={country} value={country}>
+                          {country}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      ESS 카테고리
+                    </label>
+                    <select
+                      value={selectedEssCategory}
+                      onChange={(e) => {
+                        setSelectedEssCategory(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="input py-2.5"
+                    >
+                      <option value="all">전체</option>
+                      {filters?.ess_categories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="pt-6 border-t border-gray-200">
                     <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">
                       필터링된 결과
                     </p>
                     <p className="text-3xl font-bold text-gray-900 mb-1">
-                      {filteredProjects.length}
+                      {loading ? '...' : pagination.totalItems}
                     </p>
                     <p className="text-sm text-gray-600">
                       프로젝트
@@ -257,7 +404,18 @@ export function CarbonOffsetsPage() {
               </Card>
 
               {/* Results */}
-              {filteredProjects.length === 0 ? (
+              {loading ? (
+                <Card className="p-16">
+                  <Loading />
+                </Card>
+              ) : error ? (
+                <Card className="p-16 text-center">
+                  <div className="max-w-sm mx-auto">
+                    <p className="text-red-600 mb-2">에러 발생</p>
+                    <p className="text-gray-500">{error}</p>
+                  </div>
+                </Card>
+              ) : pagination.totalItems === 0 ? (
                 <Card className="p-16 text-center">
                   <div className="max-w-sm mx-auto">
                     <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -269,63 +427,129 @@ export function CarbonOffsetsPage() {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {filteredProjects.map((project) => (
-                    <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
-                      className="group block"
-                    >
-                      <Card className="p-6 hover:shadow-xl hover:border-sky-500 transition-all duration-300">
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge variant="secondary" className="font-semibold">
-                            CarbonPlan
-                          </Badge>
-                          <Badge variant="outline" className="uppercase font-medium">
-                            {project.registry}
-                          </Badge>
-                          {project.protocol.map((p) => (
-                            <Badge
-                              key={p}
-                              variant="default"
-                            >
-                              {p}
+                  {pagination.items.map((project) => {
+                    const carbonRegistry = (project as any).carbon_registry || '';
+                    const carbonProtocol = (project as any).carbon_protocol || '';
+                    const creditQuantity = (project as any).credit_quantity || 0;
+                    const listingDate = project.approval_date || (project as any).primary_date;
+                    const vintageRange = (project as any).cc_vintage_range || '';
+                    const firstTransaction = (project as any).cc_first_transaction_date;
+                    const lastTransaction = (project as any).cc_last_transaction_date;
+                    
+                    return (
+                      <Link
+                        key={project.ref}
+                        to={`/projects/${project.ref}`}
+                        className="group block"
+                      >
+                        <Card className="p-6 hover:shadow-xl hover:border-sky-500 transition-all duration-300">
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <Badge variant="secondary" className="font-semibold">
+                              CarbonPlan
                             </Badge>
-                          ))}
-                        </div>
-
-                        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-sky-600 transition-colors">
-                          {project.name}
-                        </h3>
-
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-6">
-                          <span className="font-mono font-medium">ID: {project.id}</span>
-                          <span>• Vintage: {project.vintageRange}</span>
-                          <span>• {formatDate(project.listingDate)}</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">발급 크레딧</p>
-                            <p className="text-base font-bold text-gray-900">
-                              {formatCompactNumber(project.creditQuantity)} tCO2e
-                            </p>
+                            {carbonRegistry && (
+                              <Badge variant="outline" className="uppercase font-medium">
+                                {carbonRegistry}
+                              </Badge>
+                            )}
+                            {carbonProtocol && (
+                              <Badge variant="default">
+                                {carbonProtocol}
+                              </Badge>
+                            )}
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">첫 거래</p>
-                            <p className="text-base font-bold text-gray-900">
-                              {formatDate(project.firstTransaction)}
-                            </p>
+
+                          <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-sky-600 transition-colors">
+                            {project.project_name}
+                          </h3>
+
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-6">
+                            <span className="font-mono font-medium">ID: {project.ref}</span>
+                            {vintageRange && <span>• Vintage: {vintageRange}</span>}
+                            {listingDate && (
+                              <span>• {formatDate(new Date(listingDate))}</span>
+                            )}
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">마지막 거래</p>
-                            <p className="text-base font-bold text-sky-600">
-                              {formatDate(project.lastTransaction)}
-                            </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            {creditQuantity > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">발급 크레딧</p>
+                                <p className="text-base font-bold text-gray-900">
+                                  {formatCompactNumber(creditQuantity)} tCO2e
+                                </p>
+                              </div>
+                            )}
+                            {firstTransaction && (
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">첫 거래</p>
+                                <p className="text-base font-bold text-gray-900">
+                                  {formatDate(new Date(firstTransaction))}
+                                </p>
+                              </div>
+                            )}
+                            {lastTransaction && (
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">마지막 거래</p>
+                                <p className="text-base font-bold text-sky-600">
+                                  {formatDate(new Date(lastTransaction))}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  ))}
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {!loading && pagination.totalItems > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between mt-8 gap-4">
+                  <p className="text-sm font-medium text-gray-600">
+                    페이지 {pagination.currentPage} / {pagination.totalPages} (총 {formatCompactNumber(pagination.totalItems)}개)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      disabled={!pagination.hasPrev}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    >
+                      이전
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+                        let pageNum: number;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = pagination.currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="min-w-[40px]"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      disabled={!pagination.hasNext}
+                      onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                    >
+                      다음
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

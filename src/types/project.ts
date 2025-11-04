@@ -57,15 +57,23 @@ export interface CarbonInfo {
 
 // 프론트엔드용 통합 프로젝트 모델
 export interface Project {
-  id: string;
-  source: 'GCF' | 'CarbonPlan';
-  name: string;
-  developer: string | null;
-  theme: 'Adaptation' | 'Mitigation' | 'Cross-cutting' | null;
-  primaryDate: Date | null;
-  dateType: 'Approval' | 'Listing' | null;
-  gcf?: GCFInfo;
-  carbon?: CarbonInfo;
+  ref: string; // 프로젝트 참조 ID (PK)
+  modality: string; // PAP, SAP 등
+  project_name: string;
+  entity: string; // UNDP 등
+  countries: string;
+  bm: string | null; // Board Meeting
+  theme: string; // Adaptation, Mitigation, Cross-cutting
+  project_size: string | null; // Small, Medium, Large
+  ess_category: string | null;
+  status: string;
+  fa_financing: number | null;
+  total_gcf_funding: number | null;
+  total_project_value: number | null;
+  approval_date: string | null;
+  
+  // 추가 정보가 있을 경우 optional로 처리
+  [key: string]: unknown;
 }
 
 // 필터 상태

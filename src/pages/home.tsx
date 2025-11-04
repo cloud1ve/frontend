@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Database,
@@ -15,16 +16,43 @@ import { StatCard } from '../components/common/stat-card';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { statisticsApi } from '../services/api';
+import { Loading } from '../components/common/loading';
 
 export function HomePage() {
-  // TODO: 실제 API에서 데이터 가져오기
-  const stats = {
-    totalProjects: 488084,
-    gcfProjects: 150,
-    carbonProjects: 487934,
-    totalCredits: 1500000000,
-    totalFinancing: 25000000000,
-  };
+  const [stats, setStats] = useState({
+    totalProjects: 0,
+    gcfProjects: 0,
+    carbonProjects: 0,
+    totalCredits: 0,
+    totalFinancing: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadStatistics() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await statisticsApi.getStatistics();
+        setStats({
+          totalProjects: response.total.projects,
+          gcfProjects: response.total.gcfProjects,
+          carbonProjects: response.total.carbonProjects,
+          totalCredits: response.total.totalCredits,
+          totalFinancing: response.total.totalFinancing,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '통계를 불러오는데 실패했습니다');
+        console.error('Failed to load statistics:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadStatistics();
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -103,55 +131,68 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            <StatCard
-              title="총 프로젝트"
-              value={stats.totalProjects}
-              icon={Database}
-              colorClass="text-primary-500"
-            />
-            <StatCard
-              title="GCF 프로젝트"
-              value={stats.gcfProjects}
-              icon={Globe2}
-              colorClass="text-emerald-600"
-            />
-            <StatCard
-              title="탄소 상쇄 프로젝트"
-              value={stats.carbonProjects}
-              icon={Leaf}
-              colorClass="text-sky-500"
-            />
-            <StatCard
-              title="총 발급 크레딧"
-              value={stats.totalCredits}
-              icon={TrendingUp}
-              suffix="tCO2e"
-              colorClass="text-green-600"
-            />
-            <StatCard
-              title="총 기후 금융"
-              value={stats.totalFinancing}
-              icon={TrendingUp}
-              suffix="USD"
-              colorClass="text-blue-600"
-            />
-            <Card className="bg-gradient-to-br from-gradient-to-br from-emerald-50 via-sky-50 to-white border-emerald-200/50">
-              <CardContent className="pt-8 pb-6">
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wide">
-                    데이터 소스
-                  </p>
-                  <div className="flex items-center justify-center gap-3">
-                    <Badge variant="primary" className="text-sm px-4 py-2">
-                      GCF
-                    </Badge>
-                    <Badge variant="secondary" className="text-sm px-4 py-2">
-                      CarbonPlan
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {loading ? (
+              <div className="col-span-full">
+                <Loading />
+              </div>
+            ) : error ? (
+              <div className="col-span-full text-center">
+                <p className="text-red-600 mb-2">에러 발생</p>
+                <p className="text-gray-500">{error}</p>
+              </div>
+            ) : (
+              <>
+                <StatCard
+                  title="총 프로젝트"
+                  value={stats.totalProjects}
+                  icon={Database}
+                  colorClass="text-primary-500"
+                />
+                <StatCard
+                  title="GCF 프로젝트"
+                  value={stats.gcfProjects}
+                  icon={Globe2}
+                  colorClass="text-emerald-600"
+                />
+                <StatCard
+                  title="탄소 상쇄 프로젝트"
+                  value={stats.carbonProjects}
+                  icon={Leaf}
+                  colorClass="text-sky-500"
+                />
+                <StatCard
+                  title="총 발급 크레딧"
+                  value={stats.totalCredits}
+                  icon={TrendingUp}
+                  suffix="tCO2e"
+                  colorClass="text-green-600"
+                />
+                <StatCard
+                  title="총 기후 금융"
+                  value={stats.totalFinancing}
+                  icon={TrendingUp}
+                  suffix="USD"
+                  colorClass="text-blue-600"
+                />
+                <Card className="bg-gradient-to-br from-gradient-to-br from-emerald-50 via-sky-50 to-white border-emerald-200/50">
+                  <CardContent className="pt-8 pb-6">
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wide">
+                        데이터 소스
+                      </p>
+                      <div className="flex items-center justify-center gap-3">
+                        <Badge variant="primary" className="text-sm px-4 py-2">
+                          GCF
+                        </Badge>
+                        <Badge variant="secondary" className="text-sm px-4 py-2">
+                          CarbonPlan
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         </div>
       </section>

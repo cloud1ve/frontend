@@ -1,55 +1,60 @@
 import type { Project, FilterState } from './project';
 
+// API 공통 래퍼 타입
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
 // API 요청 타입
 export interface GetProjectsParams {
   page?: number;
   limit?: number;
-  source?: 'GCF' | 'CarbonPlan';
-  theme?: string[];
-  registry?: string[];
-  countries?: string[];
-  projectSize?: string[];
+  modality?: string;
+  countries?: string;
+  theme?: string;
+  projectSize?: string;
   search?: string;
-  sortBy?: 'date' | 'credits' | 'finance' | 'name';
+  sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  minCredits?: number;
-  maxCredits?: number;
-  minFinance?: number;
-  maxFinance?: number;
-  startDate?: string;
-  endDate?: string;
 }
 
 // 페이지네이션 정보
 export interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+  current_page: number;
+  total_pages: number;
+  total_items: number;
+  items_per_page: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+// 프로젝트 목록 데이터
+export interface ProjectsData {
+  items: Project[];
+  pagination: PaginationInfo;
 }
 
 // 필터 옵션
-export interface FilterOptions {
-  themes: string[];
-  registries: string[];
+export interface FiltersData {
+  modalities: string[];
   countries: string[];
-  projectSizes: string[];
+  themes: string[];
+  project_sizes: string[];
+  ess_categories: string[];
+  statuses: string[];
 }
 
 // API 응답 타입
-export interface GetProjectsResponse {
-  data: Project[];
-  pagination: PaginationInfo;
-  filters: {
-    appliedFilters: Partial<FilterState>;
-    availableOptions: FilterOptions;
-  };
-}
+export interface GetProjectsResponse extends ApiResponse<ProjectsData> {}
 
-export interface GetProjectDetailResponse {
-  project: Project;
-  relatedProjects?: Project[];
-}
+export interface GetProjectDetailResponse extends ApiResponse<Project> {}
+
+export interface GetFiltersResponse extends ApiResponse<FiltersData> {}
 
 export interface GetStatisticsResponse {
   total: {
@@ -72,24 +77,12 @@ export interface GetStatisticsResponse {
   }[];
 }
 
-export interface GetFiltersResponse {
-  themes: string[];
-  registries: string[];
-  countries: string[];
-  projectSizes: string[];
-  developers: string[];
-  dateRange: {
-    min: string;
-    max: string;
-  };
-  creditRange: {
-    min: number;
-    max: number;
-  };
-  financeRange: {
-    min: number;
-    max: number;
-  };
+// 헬스 체크 응답
+export interface HealthResponse {
+  status: string;
+  message: string;
+  timestamp: string;
+  uptime: number;
 }
 
 // 에러 응답
