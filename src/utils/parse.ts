@@ -1,4 +1,17 @@
-import type { ProjectRecord, Project, GCFInfo, CarbonInfo } from '../types/project';
+import type { ProjectRecord, GCFInfo, CarbonInfo } from '../types/project';
+
+// parse.ts 전용 프로젝트 타입 (레거시)
+interface ParsedProject {
+  id: string;
+  source: 'GCF' | 'CarbonPlan';
+  name: string;
+  developer: string;
+  theme: string;
+  primaryDate: Date | null;
+  dateType: string;
+  gcf?: GCFInfo;
+  carbon?: CarbonInfo;
+}
 
 // JSON 문자열 파싱 (안전)
 function parseJSON<T>(str: string | null): T | null {
@@ -50,15 +63,15 @@ function parseDate(str: string | null): Date | null {
 }
 
 // DB 레코드를 프론트엔드 프로젝트 모델로 변환
-export function transformProject(record: ProjectRecord): Project {
-  const project: Project = {
+export function transformProject(record: ProjectRecord): ParsedProject {
+  const project: ParsedProject = {
     id: record.project_ref_id,
     source: record.source,
     name: record.project_name,
-    developer: record.developer_proponent,
-    theme: record.gcf_theme,
+    developer: record.developer_proponent || '',
+    theme: record.gcf_theme || '',
     primaryDate: parseDate(record.primary_date),
-    dateType: record.date_type,
+    dateType: record.date_type || '',
   };
 
   // GCF 데이터가 있는 경우
@@ -105,7 +118,7 @@ export function transformProject(record: ProjectRecord): Project {
 }
 
 // 배치 변환
-export function transformProjects(records: ProjectRecord[]): Project[] {
+export function transformProjects(records: ProjectRecord[]): ParsedProject[] {
   return records.map(transformProject);
 }
 

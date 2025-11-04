@@ -29,7 +29,7 @@ export function createProjectFilter(filterOptions: ProjectFilterOptions) {
     }
 
     // 국가 필터링
-    if (selectedCountry !== 'all') {
+    if (selectedCountry && selectedCountry !== 'all') {
       const projectCountries = project.countries ? project.countries.split(',').map(c => c.trim()) : [];
       if (!projectCountries.includes(selectedCountry)) {
         return false;

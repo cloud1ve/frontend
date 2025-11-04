@@ -1,4 +1,4 @@
-import type { Project, FilterState } from './project';
+import type { Project } from './project';
 
 // API 공통 래퍼 타입
 export interface ApiResponse<T> {
