@@ -17,7 +17,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { statisticsApi } from '../services/api';
-import { Loading } from '../components/common/loading';
 
 export function HomePage() {
   const [stats, setStats] = useState({
