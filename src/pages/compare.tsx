@@ -6,14 +6,43 @@ import {
   formatDate,
   formatTheme,
 } from '../utils/format';
-import type { Project } from '../types/project';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 
+// Compare 페이지 전용 타입
+interface CompareProject {
+  id: string;
+  source: 'GCF' | 'CarbonPlan';
+  name: string;
+  developer: string;
+  theme: string | null;
+  primaryDate: Date | null;
+  dateType: string | null;
+  gcf?: {
+    status: string;
+    modality: string;
+    countries: string[];
+    boardMeeting: string;
+    projectSize: string;
+    essCategory: string;
+    faFinancing: number;
+    totalGcfFunding: number;
+    totalProjectValue: number;
+  };
+  carbon?: {
+    protocol: string[];
+    registry: string;
+    creditQuantity: number;
+    firstTransactionDate: Date;
+    lastTransactionDate: Date;
+    vintageRange: string;
+  };
+}
+
 // TODO: 실제 API 연동
-const mockProjects: Project[] = [
+const mockProjects: CompareProject[] = [
   {
     id: 'FP043',
     source: 'GCF',
@@ -54,11 +83,11 @@ const mockProjects: Project[] = [
 ];
 
 export function ComparePage() {
-  const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<CompareProject[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  const addProject = (project: Project) => {
+  const addProject = (project: CompareProject) => {
     if (selectedProjects.length < 5 && !selectedProjects.find((p) => p.id === project.id)) {
       setSelectedProjects([...selectedProjects, project]);
       setSearchQuery('');
