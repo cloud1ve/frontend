@@ -44,9 +44,9 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Install AWS CLI v2
-        uses: aws-actions/setup-aws-cli@v2
+        uses: aws-actions/setup-awscli@v2
         with:
-          version: '2.x'
+          version: '2'
 
       - name: Check AWS CLI
         run: aws --version
