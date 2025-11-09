@@ -43,9 +43,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install AWS CLI v2
-        uses: aws-actions/setup-aws-cli@v4
-
       - name: Check AWS CLI
         run: aws --version
   
