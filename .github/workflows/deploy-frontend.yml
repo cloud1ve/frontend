@@ -43,10 +43,14 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install AWS CLI
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y awscli
+      - name: Install AWS CLI v2
+        uses: aws-actions/aws-cli-setup@v2
+        with:
+          version: '2.x'
+
+      - name: Check AWS CLI
+        run: aws --version
+  
 
       # 해시된 정적 파일: 1년 캐시
       - name: Sync assets (immutable)
